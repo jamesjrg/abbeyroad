@@ -1,0 +1,21 @@
+*.suo
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+[Bb]in/
+[Oo]bj/
+
+# nuget
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
+
+#paket
+.paket/paket.exe
+
+#Resharper
+*.DotSettings.User

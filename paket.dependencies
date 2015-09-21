@@ -1,0 +1,4 @@
+source http://nuget.org/api/v2
+
+nuget OpenCV.Net
+nuget canopy
