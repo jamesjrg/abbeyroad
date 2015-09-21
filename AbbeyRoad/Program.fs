@@ -1,78 +1,148 @@
 ﻿module AbbeyRoad.Program
 
-open canopy
 open System
-open OpenQA.Selenium
-open OpenCV.Net
 open System.IO
+open System.Threading
+
+(* coordinates
+top left black : 310, 200, tr black: 332, 200
+tr white: 347, 201, tr black 361, 200
+tr white:  379, 202, tr black: 394, 202
+tr white: 410, 203, tr black: 423, 204
+tr white: 439, 205, tr black: 455, 205
+tr white: 473, 206, tr black: 489, 207
+tr white: 506, 209 tr black: 533, 209
+
+bottom left black: 275, 214, bottom right black: 296, 214
+br black:
+ *)
 
 (*
---> code to get screenshot bytes, decode, grayscale, then re-encode and save as jpeg is not working
 
---> once that works, need to create unpressed note images:
+at startup need unpressed note images for comparison:
 - by hand work out x y coords for each polygon for each note, then create example images for each bar from a screenshot of empty crossing, or maybe programatically create black and white image using only coords from real image
 
 -> then extract polygons of interest
 --> either ROI or sub rectangles or deep copied sub rectangles, extract box containing each white bar
 --- select polygons within each rectangle
 --> possibly by creating black mask image, then filling white contour polygon on region of interest, then or-ing with original rectangle
-- use some sort of built-in OpenCV function to compare each polygon within frame to each example polygon - maybe just euclidian distance?
+
+Function to calculate active polygons:
+
 
 -> play sound matching pressed note
 
--> finally add loop to take screenshots and analyse continuously
+-> iron out issues in looping version of code
+
+-> add various synth sound options in addition to piano
 
 *)
 
-let flashElement () =
-    element ".earthcam-embed-container"
+type Note =
+    | A
+    | B
 
-let cropFrame (uncropped:Mat) =
-    let iframe = element "iframe"
-    let width = iframe.Size.Width
-    let height = iframe.Size.Height
-    let x = iframe.Location.X
-    let y = iframe.Location.Y
+type Point =
+    { X: int
+      Y: int }
 
-    uncropped.GetSubRect(new Rect(x, y, width, height))
+module BrowserAutomation = 
+    open canopy
+    open OpenQA.Selenium
+    open System.Drawing
 
-let getFrame() =
-    let screenShotBytes = (browser :?> ITakesScreenshot).GetScreenshot().AsByteArray    
-    let buffer = Mat.FromArray(screenShotBytes)
-    let uncropped = CV.DecodeImageM(buffer, LoadImageFlags.Grayscale)
-    cropFrame uncropped  
+    let flashElement () =
+        element ".earthcam-embed-container"
 
-let saveImage mat =
-    let path = Path.Combine(@"C:\Users\James\Documents\tmp", DateTime.Now.ToString("MM-dd-HH-mm-ss") + ".png")
-    CV.SaveImage(path, mat)
+    let iframeRect () =
+        let iframe = element "iframe"
+        let width = iframe.Size.Width
+        let height = iframe.Size.Height
+        let x = iframe.Location.X
+        let y = iframe.Location.Y
 
-let fullScreenshot() =
-    screenshot @"C:\Users\James\Documents\tmp" (DateTime.Now.ToString("MM-dd-HH-mm-ss")) |> ignore
+        Rectangle(x, y, width, height)
 
-let go () =
-    start firefox
+    let start () =
+        start firefox
+        url "http://www.abbeyroad.com/crossing"
 
-    url "http://www.abbeyroad.com/crossing"
+    let screenshot () =
+        (browser :?> ITakesScreenshot).GetScreenshot().AsByteArray 
 
-    //sleep 2
+module ImageProcessing =    
+    open OpenCV.Net
+    open System.Drawing      
 
-    let frame = getFrame()
-    saveImage frame   
+    let saveImage mat =
+        let path = Path.Combine(@"C:\Users\James\Documents\tmp", DateTime.Now.ToString("MM-dd-HH-mm-ss") + ".png")
+        CV.SaveImage(path, mat)
 
-let loadImage =
-    (*Mat image = imread("src_image_path");*)
-    0
+    let cropWebcamImage (screenshotBytes:byte[]) (iframeRect:Rectangle) =
+        let buffer = Mat.FromArray(screenshotBytes)
+        let uncropped = CV.DecodeImageM(buffer, LoadImageFlags.Grayscale)
+        uncropped.GetSubRect(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
 
-let selectRectangle x y width height =
+    //assumes polygon slants down and right
+    let createMaskImage (topLeft:Point) (topRight:Point) (bottomLeft:Point) (bottomRight:Point) =
+        let mask = Mat.Zeros(topLeft.Y - bottomRight.Y, bottomRight.X - topLeft.X, Depth.U8, 3)
+        CV.DrawContours(mask, contour, black, white, maxLevel, -1, LineFlags.Something)
+        mask
+
+    //assumes polygon slants down and right
+    let combineWithMaskImage (wholeImage:Mat) topLeft topRight bottomLeft bottomRight
+        let mask = createMaskImage topLeft topRight bottomLeft bottomRight
+        let regionOfInterest = wholeImage.GetSubRect(Rect())
+        mask & regionOfInterest        
+
     (*
-    Rect roi = Rect(x, y, w, h); Mat image_roi = image(roi);*)
-    0
+    different comparison ideas:
+    1. simple euclidian distance
+    2. simple histogram comparison (4 different comparisons included in OpenCV) - though very sensitive to lighting changes
+    3. histogram comparison, combined with adjusting brightness of example empty images to match current time of day & weather
+    4. don't compare to example images at all, but rather just test entropy of histogram for each polygon - high entropy means the 
+    plain colour of the background is likely mixed up with an object on top of it
+    *)
+    let getActivePolygons (screenshotBytes:byte[]) (iframeRect:Rectangle) =
+        let webcamImage = cropWebcamImage screenshotBytes iframeRect
+        []
 
-let selectPolygon =
-    //
-    0
+module SoundPlayer =
+    open System.Media
+
+    let audioPath file =
+        Path.Combine("audio", file) + ".wav"
+
+    let piano =
+        function
+        | A -> audioPath "piano_a"
+        | B -> audioPath "piano_b"
+
+    let synth1 =
+        function
+        | A -> audioPath "synth1_a"
+        | B -> audioPath "synth1_b"
+
+    let soundplayer = new SoundPlayer()
+
+    let playNotes notes =
+        ()
+
+module PianoLogic =
+    let getNotes activePolygons previousActivePolygons =
+        []
+
+let rec loop previousActivePolygons iframeRect =
+    Thread.Sleep(40)
+    let screenshot = BrowserAutomation.screenshot()    
+    let activePolygons = ImageProcessing.getActivePolygons screenshot iframeRect
+    let notes = PianoLogic.getNotes activePolygons previousActivePolygons
+    SoundPlayer.playNotes notes    
+    //loop activePolygons iframeRect
 
 [<EntryPoint>]
 let main argv = 
-    go()
+    BrowserAutomation.start ()
+    let iframeRect = BrowserAutomation.iframeRect()
+    loop [] iframeRect
     0
