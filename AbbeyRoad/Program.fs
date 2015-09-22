@@ -18,56 +18,65 @@ type Note =
     | Black7
 
 module BrowserAutomation = 
-    open canopy
-    open OpenQA.Selenium
-    open System.Drawing
-
-    let flashElement () =
-        element ".earthcam-embed-container"
-
-    let iframeRect () =
-        let iframe = element "iframe"
-        let width = iframe.Size.Width
-        let height = iframe.Size.Height
-        let x = iframe.Location.X
-        let y = iframe.Location.Y
-
-        Rectangle(x, y, width, height)
-
-    let start () =
-        start firefox
-        url "http://www.abbeyroad.com/crossing"
-
-    let screenshot () =
-        (browser :?> ITakesScreenshot).GetScreenshot().AsByteArray 
+    
 
 //FIXME lots of OpenCV types are IDisposable, possibly there are lots of memory leaks at the moment
 module ImageProcessing =   
     open System.IO 
     open OpenCvSharp
-    open System.Drawing  
-    
-    type Point =
-        { X: int
-          Y: int }    
 
+    let coordsTopAndBottom =
+        [|
+            (Point(310, 200), Point(275, 214)),
+            (Point(332, 200), Point(296, 214)),
+            (Point(347, 201), Point(316, 216)),
+            (Point(361, 200), Point(329, 217)),
+            (Point(379, 202), Point(348, 217)),
+            (Point(394, 202), Point(364, 218)),
+            (Point(410, 203), Point(383, 218)),
+            (Point(423, 204), Point(394, 219)),
+            (Point(439, 205), Point(417, 200)),
+            (Point(455, 205), Point(431, 221)),
+            (Point(473, 206), Point(451, 222)),
+            (Point(489, 207), Point(467, 223)),
+            (Point(506, 209), Point(489, 224)),
+            (Point(533, 209), Point(514, 228))
+        |]
+(*
+    let keys =
+        topLeftsAndBottomLefts
+        |> pairwise create tl, tr, br, bl
+        |> pairwise with reflection union cases
+
+         let keys = [|
+*)
+      
     let saveMat (mat:Mat) =
         let path = Path.Combine(@"C:\Users\James\Documents\tmp", DateTime.Now.ToString("MM-dd-HH-mm-ss") + ".png")
         mat.SaveImage(path)
 
-    let cropWebcamImage (screenshotBytes:byte[]) (iframeRect:Rectangle) =
-        let uncropped = Mat.ImDecode(screenshotBytes, ImreadModes.GrayScale)
-        uncropped.GetSubRect(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
+    let cropWebcamImage (screenshotBytes:byte[]) (iframeRect:System.Drawing.Rectangle) =
+        let uncropped = Mat.FromImageData(screenshotBytes, ImreadModes.GrayScale)
+        uncropped.SubMat(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
 
     let createMaskImage (topLeft:Point) (topRight:Point) (bottomLeft:Point) (bottomRight:Point) =
-        let mask = Mat.Zeros(Math.Abs(topLeft.Y - bottomRight.Y), Math.Abs(bottomRight.X - topLeft.X), Depth.U8, 3)
-        CV.DrawContours(mask, contours, Scalar(0., 0., 0.), Scalar(255., 255., 255.), 1, -1)
+        let contours = new Collections.Generic.List<Collections.Generic.IEnumerable<Point>>()
+        let mask =
+            Mat.Zeros(
+                Math.Abs(topLeft.Y - bottomRight.Y),
+                Math.Abs(bottomRight.X - topLeft.X),
+                MatType.CV_8UC3).ToMat()
+        mask.DrawContours(
+                contours :> Collections.Generic.IEnumerable<Collections.Generic.IEnumerable<Point>>,
+                -1,
+                Scalar(255., 255., 255.),
+                -1)
         mask
 
-    let combineWithMaskImage (wholeImage:Mat) topLeft topRight bottomLeft bottomRight
+    let combineWithMaskImage (wholeImage:Mat) topLeft topRight bottomLeft bottomRight =
         use mask = createMaskImage topLeft topRight bottomLeft bottomRight
-        let regionOfInterest = wholeImage.GetSubRect(Rect())
-        mask & regionOfInterest        
+        let regionOfInterest = wholeImage.SubMat(Rect())
+        Cv2.BitwiseAnd(InputArray.Create(mask), InputArray.Create(regionOfInterest), OutputArray.Create(mask))
 
     let euclidianDistance () =
         ()
@@ -75,12 +84,21 @@ module ImageProcessing =
     let histogramEntropy () =
         ()
 
-    let compareHistograms (empty:Histogram) (actual:Histogram) comparisonMethod =
-        empty.Compare(actual, comparisonMethod)
+    let compareHistograms (empty:Mat) (actual:Mat) comparisonMethod =
+        Cv2.CompareHist(InputArray.Create(empty), InputArray.Create(actual), comparisonMethod)
 
-    let getHistogram mat =
-        let histogram = new Histogram(int dims, int[] sizes, HistogramType type, float[][] ranges = null, bool uniform = true)
-        histogram.CalcArrHist()
+    let getHistogram (src:Mat) =
+        let hist = OutputArray.Create(new Mat());
+        let hdims = [|256|]; // Histogram size for each dimension
+        let ranges = [| new Rangef(0.f,256.f) |]; // min/max 
+        Cv2.CalcHist(
+            [|src|],
+            [|0|],
+            null,
+            hist,
+            1,
+            hdims,
+            ranges)
 
     (*
     different comparison ideas:
@@ -90,8 +108,9 @@ module ImageProcessing =
     4. don't compare to example images at all, but rather just test entropy of histogram for each polygon - high entropy means the 
     plain colour of the background is likely mixed up with an object on top of it
     *)
-    let getActivePolygons (screenshotBytes:byte[]) (iframeRect:Rectangle) =
+    let getActivePolygons (screenshotBytes:byte[]) (iframeRect:System.Drawing.Rectangle) =
         let webcamImage = cropWebcamImage screenshotBytes iframeRect
+        saveMat webcamImage |> ignore
         []
 
 module PianoLogic =
@@ -108,50 +127,12 @@ module Main =
         let notes = PianoLogic.getNotes activePolygons previousActivePolygons
         do! Async.Sleep(framePeriod)
         return! loop activePolygons iframeRect
-    }
-
-module WebServer =
-    open Suave
-    open Suave.Http
-    open Suave.Sockets
-    open Suave.WebSocket
-    open Suave.Web
-    open Suave.Http.Files
-    open Suave.Sockets.Control
-
-    let giveMusic (webSocket : WebSocket) =
-        fun cx -> socket {
-            let loop = ref true
-            while !loop do
-            let! msg = webSocket.read()
-            match msg with
-            | (Text, data, true) ->
-                let str = Utils.UTF8.toString data
-                do! webSocket.send Text data true
-            | (Ping, _, _) ->
-                do! webSocket.send Pong [||] true
-            | (Close, _, _) ->
-                do! webSocket.send Close [||] true
-                loop := false
-            | _ -> ()
-      }
-
-    let app : Types.WebPart =
-      choose [
-        Applicatives.path "/givemethemusic" >>= handShake giveMusic
-        Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "index.htm"; browseHome ];
-        RequestErrors.NOT_FOUND "Found no handlers."
-        ]
-
-    let start () =
-        let config = defaultConfig
-        printfn "Starting on %d" config.bindings.Head.socketBinding.port
-        startWebServer config app
+    }   
 
 [<EntryPoint>]
 let main argv = 
     BrowserAutomation.start ()    
     let iframeRect = BrowserAutomation.iframeRect()
-    let Async.StartAsTask (Main.loop [] iframeRect)
+    Async.StartAsTask (Main.loop [] iframeRect) |> ignore
     WebServer.start()
     0

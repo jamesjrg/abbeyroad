@@ -47,6 +47,8 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BrowserAutomation.fs" />
+    <Compile Include="WebServer.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="Scripts\load-references.fsx" />
