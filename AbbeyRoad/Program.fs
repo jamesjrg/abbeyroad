@@ -161,11 +161,15 @@ module Main =
         //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x64\OpenCvSharpExtern.dll") |> ignore
         //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x86\OpenCvSharpExtern.dll") |> ignore
 
-        BrowserAutomation.start ()
-        let iframeRect = BrowserAutomation.iframeRect()
-        let screenshot = BrowserAutomation.screenshot()
-        let webcamImage = ImageProcessing.cropWebcamImage screenshot iframeRect
-        let x = ImageProcessing.createMaskedPolygon webcamImage (ImageProcessing.keys.[0]).Points
+        //BrowserAutomation.start ()
+        //let iframeRect = BrowserAutomation.iframeRect()
+        //let screenshot = BrowserAutomation.screenshot()
+        //let webcamImage = ImageProcessing.cropWebcamImage screenshot iframeRect
+        //let x = ImageProcessing.createMaskedPolygon webcamImage (ImageProcessing.keys.[0]).Points
+        let contours = ImageProcessing.keys.[0].Points
+        let topRight = contours.[1]
+        let bottomLeft = contours.[3]
+        let x = ImageProcessing.createMaskImage contours topRight bottomLeft
         DevTools.showMatInWinForm(x)        
 
     [<EntryPoint>]
