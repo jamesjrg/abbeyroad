@@ -187,26 +187,117 @@
     </When>
   </Choose>
   <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')">
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v3.5'">
       <ItemGroup>
-        <Reference Include="OpenCV.Net">
-          <HintPath>..\packages\OpenCV.Net\lib\net40\OpenCV.Net.dll</HintPath>
+        <Reference Include="OpenCvSharp.Blob">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net35\OpenCvSharp.Blob.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp.Extensions">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net35\OpenCvSharp.Extensions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp.UserInterface">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net35\OpenCvSharp.UserInterface.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net35\OpenCvSharp.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="PresentationCore">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Drawing">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Windows.Forms">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="WindowsBase">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v2.0' Or $(TargetFrameworkVersion) == 'v3.0')">
+      <ItemGroup>
+        <Reference Include="OpenCvSharp.Blob">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net20\OpenCvSharp.Blob.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp.UserInterface">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net20\OpenCvSharp.UserInterface.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net20\OpenCvSharp.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Drawing">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Windows.Forms">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0')">
+      <ItemGroup>
+        <Reference Include="OpenCvSharp.Blob">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net40\OpenCvSharp.Blob.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp.Extensions">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net40\OpenCvSharp.Extensions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp.UserInterface">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net40\OpenCvSharp.UserInterface.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net40\OpenCvSharp.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')">
+      <ItemGroup>
+        <Reference Include="OpenCvSharp.Blob">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net45\OpenCvSharp.Blob.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp.Extensions">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net45\OpenCvSharp.Extensions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp.UserInterface">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net45\OpenCvSharp.UserInterface.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="OpenCvSharp">
+          <HintPath>..\packages\OpenCvSharp3-AnyCPU\lib\net45\OpenCvSharp.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
       </ItemGroup>
     </When>
   </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')">
-      <PropertyGroup>
-        <__paket__OpenCV_Net_props>net40\OpenCV.Net</__paket__OpenCV_Net_props>
-        <__paket__OpenCV_Net_targets>net40\OpenCV.Net</__paket__OpenCV_Net_targets>
-      </PropertyGroup>
-    </When>
-  </Choose>
-  <Import Project="..\packages\OpenCV.Net\build\$(__paket__OpenCV_Net_props).props" Condition="Exists('..\packages\OpenCV.Net\build\$(__paket__OpenCV_Net_props).props')" Label="Paket" />
-  <Import Project="..\packages\OpenCV.Net\build\$(__paket__OpenCV_Net_targets).targets" Condition="Exists('..\packages\OpenCV.Net\build\$(__paket__OpenCV_Net_targets).targets')" Label="Paket" />
+  <Import Project="..\packages\OpenCvSharp3-AnyCPU\build\OpenCvSharp3-AnyCPU.props" Condition="Exists('..\packages\OpenCvSharp3-AnyCPU\build\OpenCvSharp3-AnyCPU.props')" Label="Paket" />
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v3.5'">
       <ItemGroup>

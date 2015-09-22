@@ -44,20 +44,19 @@ module BrowserAutomation =
 //FIXME lots of OpenCV types are IDisposable, possibly there are lots of memory leaks at the moment
 module ImageProcessing =   
     open System.IO 
-    open OpenCV.Net
+    open OpenCvSharp
     open System.Drawing  
     
     type Point =
         { X: int
           Y: int }    
 
-    let saveMat mat =
+    let saveMat (mat:Mat) =
         let path = Path.Combine(@"C:\Users\James\Documents\tmp", DateTime.Now.ToString("MM-dd-HH-mm-ss") + ".png")
-        CV.SaveImage(path, mat)
+        mat.SaveImage(path)
 
     let cropWebcamImage (screenshotBytes:byte[]) (iframeRect:Rectangle) =
-        use buffer = Mat.FromArray(screenshotBytes)
-        let uncropped = CV.DecodeImageM(buffer, LoadImageFlags.Grayscale)
+        let uncropped = Mat.ImDecode(screenshotBytes, ImreadModes.GrayScale)
         uncropped.GetSubRect(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
 
     let createMaskImage (topLeft:Point) (topRight:Point) (bottomLeft:Point) (bottomRight:Point) =

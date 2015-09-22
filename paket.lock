@@ -9,7 +9,7 @@ NUGET
     FSharp.Core (4.0.0.1)
     FsPickler (1.4.0)
     Newtonsoft.Json (7.0.1)
-    OpenCV.Net (3.3.0)
+    OpenCvSharp3-AnyCPU (3.0.0.20150823)
     Selenium.Support (2.47.0)
       Selenium.WebDriver (>= 2.47.0)
     Selenium.WebDriver (2.47.0)
