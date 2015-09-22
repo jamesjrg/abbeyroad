@@ -17,3 +17,4 @@
 #r @"..\..\packages\OpenCvSharp3-AnyCPU\lib\net45\OpenCvSharp.dll"
 #r @"..\..\packages\OpenCvSharp3-AnyCPU\lib\net45\OpenCvSharp.Extensions.dll"
 #r @"..\..\packages\OpenCvSharp3-AnyCPU\lib\net45\OpenCvSharp.UserInterface.dll"
+#r @"System.Windows.Forms.dll"
