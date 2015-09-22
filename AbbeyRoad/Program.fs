@@ -17,8 +17,15 @@ type Note =
     | White6
     | Black7        
 
-module WinForms =
+module DevTools =
+    open System.IO
     open System.Windows.Forms
+    open System.Runtime.InteropServices
+    open OpenCvSharp
+
+    let saveMatAsFile (mat:Mat) =
+        let path = Path.Combine(@"C:\Users\James\Documents\tmp", DateTime.Now.ToString("MM-dd-HH-mm-ss") + ".png")
+        mat.SaveImage(path)
 
     let showMatInWinForm mat =
         let pictureBox =
@@ -29,16 +36,14 @@ module WinForms =
         let form = new Form(Width = 800, Height = 600)
         form.Controls.Add(pictureBox)
         System.Windows.Forms.Application.Run(form)
+     
+    [<DllImport("Kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)>]
+    extern IntPtr LoadLibrary(string lpFileName);
 
 //FIXME lots of OpenCV types are IDisposable, possibly eats memory at the moment
 module ImageProcessing =   
-    open System.IO
     open Microsoft.FSharp.Reflection
     open OpenCvSharp    
-
-    let saveMatAsFile (mat:Mat) =
-        let path = Path.Combine(@"C:\Users\James\Documents\tmp", DateTime.Now.ToString("MM-dd-HH-mm-ss") + ".png")
-        mat.SaveImage(path)
 
     type Key = { Label: Note; Points: Point[] }
 
@@ -151,15 +156,17 @@ module Main =
         Async.StartAsTask (loop [] iframeRect) |> ignore
 
     let testing () =
-        //failing attempt to get it to load native dlls when running in F# Interactive
-        System.Environment.CurrentDirectory <- @"C:\repos\oss\abbeyroad\AbbeyRoad\bin\Debug"
+        //failing attempts to get it to load native dlls when running in F# Interactive
+        //System.Environment.CurrentDirectory <- @"C:\repos\oss\abbeyroad\AbbeyRoad\bin\Debug\dll\x64"        
+        //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x64\OpenCvSharpExtern.dll") |> ignore
+        //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x86\OpenCvSharpExtern.dll") |> ignore
 
         BrowserAutomation.start ()
         let iframeRect = BrowserAutomation.iframeRect()
         let screenshot = BrowserAutomation.screenshot()
         let webcamImage = ImageProcessing.cropWebcamImage screenshot iframeRect
         let x = ImageProcessing.createMaskedPolygon webcamImage (ImageProcessing.keys.[0]).Points
-        WinForms.showMatInWinForm(x)        
+        DevTools.showMatInWinForm(x)        
 
     [<EntryPoint>]
     let main argv = 
