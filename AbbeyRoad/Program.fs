@@ -30,7 +30,7 @@ module WinForms =
         form.Controls.Add(pictureBox)
         System.Windows.Forms.Application.Run(form)
 
-//FIXME lots of OpenCV types are IDisposable, possibly there are lots of memory leaks at the moment
+//FIXME lots of OpenCV types are IDisposable, possibly eats memory at the moment
 module ImageProcessing =   
     open System.IO
     open Microsoft.FSharp.Reflection
@@ -52,7 +52,7 @@ module ImageProcessing =
             (Point(394, 202), Point(364, 218))
             (Point(410, 203), Point(383, 218))
             (Point(423, 204), Point(394, 219))
-            (Point(439, 205), Point(417, 200))
+            (Point(439, 205), Point(417, 220))
             (Point(455, 205), Point(431, 221))
             (Point(473, 206), Point(451, 222))
             (Point(489, 207), Point(467, 223))
@@ -64,32 +64,36 @@ module ImageProcessing =
         coordsTopAndBottom
         |> Seq.pairwise
         |> Seq.zip (FSharpType.GetUnionCases typeof<Note>)
-        |> Seq.map (fun (label, ((topRight, bottomRight), (topLeft, bottomLeft))) ->
+        |> Seq.map (fun (label, ((topLeft, bottomLeft), (topRight, bottomRight))) ->
             { Label = FSharpValue.MakeUnion(label, [||]) :?> Note; Points = [| topLeft; topRight; bottomRight; bottomLeft |] })
+        |> Array.ofSeq
       
     let cropWebcamImage (screenshotBytes:byte[]) (iframeRect:System.Drawing.Rectangle) =
-        let uncropped = Mat.FromImageData(screenshotBytes, ImreadModes.GrayScale)
+        use uncropped = Mat.FromImageData(screenshotBytes, ImreadModes.GrayScale)
         uncropped.SubMat(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
 
-    //assumes polygons slopes down from left to right
-    let createMaskImage (topLeft:Point) (topRight:Point) (bottomLeft:Point) (bottomRight:Point) =
-        let contours = new Collections.Generic.List<Collections.Generic.IEnumerable<Point>>()
+    let createMaskImage (contours:Point[]) (topRight:Point) (bottomLeft:Point) =        
         let mask =
             Mat.Zeros(
-                topLeft.Y - bottomRight.Y,
-                bottomRight.X - topLeft.X,
-                MatType.CV_8UC3).ToMat()
+                bottomLeft.Y - topRight.Y,
+                topRight.X - bottomLeft.X,
+                MatType.CV_8UC1).ToMat()
         mask.DrawContours(
-                contours :> Collections.Generic.IEnumerable<Collections.Generic.IEnumerable<Point>>,
+                [contours:> Collections.Generic.IEnumerable<Point>] :>
+                Collections.Generic.IEnumerable<Collections.Generic.IEnumerable<Point>>,
                 -1,
                 Scalar(255., 255., 255.),
                 -1)
         mask
 
-    let combineWithMaskImage (wholeImage:Mat) topLeft topRight bottomLeft bottomRight =
-        use mask = createMaskImage topLeft topRight bottomLeft bottomRight
-        let regionOfInterest = wholeImage.SubMat(Rect())
+    //assumes polygons slopes down from right to left
+    let createMaskedPolygon (wholeImage:Mat) (contours:Point[]) =
+        let topRight = contours.[1]
+        let bottomLeft = contours.[3]
+        let mask = createMaskImage contours topRight bottomLeft
+        use regionOfInterest = wholeImage.SubMat(topRight.Y, bottomLeft.Y, bottomLeft.X, topRight.X)
         Cv2.BitwiseAnd(InputArray.Create(mask), InputArray.Create(regionOfInterest), OutputArray.Create(mask))
+        mask
 
     let euclidianDistance () =
         ()
@@ -122,7 +126,7 @@ module ImageProcessing =
     plain colour of the background is likely mixed up with an object on top of it
     *)
     let getActivePolygons (screenshot:byte[]) (iframeRect:System.Drawing.Rectangle) =
-        let webcamImage = cropWebcamImage screenshot iframeRect
+        use webcamImage = cropWebcamImage screenshot iframeRect
         []
 
 module PianoLogic =
@@ -147,12 +151,15 @@ module Main =
         Async.StartAsTask (loop [] iframeRect) |> ignore
 
     let testing () =
+        //failing attempt to get it to load native dlls when running in F# Interactive
+        System.Environment.CurrentDirectory <- @"C:\repos\oss\abbeyroad\AbbeyRoad\bin\Debug"
+
         BrowserAutomation.start ()
         let iframeRect = BrowserAutomation.iframeRect()
         let screenshot = BrowserAutomation.screenshot()
         let webcamImage = ImageProcessing.cropWebcamImage screenshot iframeRect
-        WinForms.showMatInWinForm(webcamImage)
-        OpenCvSharp.Cv2.WaitKey();
+        let x = ImageProcessing.createMaskedPolygon webcamImage (ImageProcessing.keys.[0]).Points
+        WinForms.showMatInWinForm(x)        
 
     [<EntryPoint>]
     let main argv = 
