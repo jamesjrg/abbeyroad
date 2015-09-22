@@ -10,3 +10,7 @@
 #r @"System.Drawing.dll"
 #r @"System.Numerics.dll"
 #r @"..\..\packages\OpenCV.Net\lib\net40\OpenCV.Net.dll"
+#r @"..\..\packages\FsPickler\lib\net45\FsPickler.dll"
+#r @"..\..\packages\Suave\lib\net40\Suave.dll"
+#r @"System.Runtime.Serialization.dll"
+#r @"System.Xml.dll"

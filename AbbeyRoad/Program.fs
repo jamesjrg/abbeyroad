@@ -1,50 +1,21 @@
 ﻿module AbbeyRoad.Program
 
 open System
-open System.IO
-open System.Threading
-
-(* coordinates
-top left black : 310, 200, tr black: 332, 200
-tr white: 347, 201, tr black 361, 200
-tr white:  379, 202, tr black: 394, 202
-tr white: 410, 203, tr black: 423, 204
-tr white: 439, 205, tr black: 455, 205
-tr white: 473, 206, tr black: 489, 207
-tr white: 506, 209 tr black: 533, 209
-
-bottom left black: 275, 214, bottom right black: 296, 214
-br black:
- *)
-
-(*
-
-at startup need unpressed note images for comparison:
-- by hand work out x y coords for each polygon for each note, then create example images for each bar from a screenshot of empty crossing, or maybe programatically create black and white image using only coords from real image
-
--> then extract polygons of interest
---> either ROI or sub rectangles or deep copied sub rectangles, extract box containing each white bar
---- select polygons within each rectangle
---> possibly by creating black mask image, then filling white contour polygon on region of interest, then or-ing with original rectangle
-
-Function to calculate active polygons:
-
-
--> play sound matching pressed note
-
--> iron out issues in looping version of code
-
--> add various synth sound options in addition to piano
-
-*)
 
 type Note =
-    | A
-    | B
-
-type Point =
-    { X: int
-      Y: int }
+    | Black1
+    | White1
+    | Black2
+    | White2
+    | Black3
+    | White3
+    | Black4
+    | White4
+    | Black5
+    | White5
+    | Black6
+    | White6
+    | Black7
 
 module BrowserAutomation = 
     open canopy
@@ -70,30 +41,47 @@ module BrowserAutomation =
     let screenshot () =
         (browser :?> ITakesScreenshot).GetScreenshot().AsByteArray 
 
-module ImageProcessing =    
+//FIXME lots of OpenCV types are IDisposable, possibly there are lots of memory leaks at the moment
+module ImageProcessing =   
+    open System.IO 
     open OpenCV.Net
-    open System.Drawing      
+    open System.Drawing  
+    
+    type Point =
+        { X: int
+          Y: int }    
 
-    let saveImage mat =
+    let saveMat mat =
         let path = Path.Combine(@"C:\Users\James\Documents\tmp", DateTime.Now.ToString("MM-dd-HH-mm-ss") + ".png")
         CV.SaveImage(path, mat)
 
     let cropWebcamImage (screenshotBytes:byte[]) (iframeRect:Rectangle) =
-        let buffer = Mat.FromArray(screenshotBytes)
+        use buffer = Mat.FromArray(screenshotBytes)
         let uncropped = CV.DecodeImageM(buffer, LoadImageFlags.Grayscale)
         uncropped.GetSubRect(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
 
-    //assumes polygon slants down and right
     let createMaskImage (topLeft:Point) (topRight:Point) (bottomLeft:Point) (bottomRight:Point) =
-        let mask = Mat.Zeros(topLeft.Y - bottomRight.Y, bottomRight.X - topLeft.X, Depth.U8, 3)
-        CV.DrawContours(mask, contour, black, white, maxLevel, -1, LineFlags.Something)
+        let mask = Mat.Zeros(Math.Abs(topLeft.Y - bottomRight.Y), Math.Abs(bottomRight.X - topLeft.X), Depth.U8, 3)
+        CV.DrawContours(mask, contours, Scalar(0., 0., 0.), Scalar(255., 255., 255.), 1, -1)
         mask
 
-    //assumes polygon slants down and right
     let combineWithMaskImage (wholeImage:Mat) topLeft topRight bottomLeft bottomRight
-        let mask = createMaskImage topLeft topRight bottomLeft bottomRight
+        use mask = createMaskImage topLeft topRight bottomLeft bottomRight
         let regionOfInterest = wholeImage.GetSubRect(Rect())
         mask & regionOfInterest        
+
+    let euclidianDistance () =
+        ()
+
+    let histogramEntropy () =
+        ()
+
+    let compareHistograms (empty:Histogram) (actual:Histogram) comparisonMethod =
+        empty.Compare(actual, comparisonMethod)
+
+    let getHistogram mat =
+        let histogram = new Histogram(int dims, int[] sizes, HistogramType type, float[][] ranges = null, bool uniform = true)
+        histogram.CalcArrHist()
 
     (*
     different comparison ideas:
@@ -107,42 +95,64 @@ module ImageProcessing =
         let webcamImage = cropWebcamImage screenshotBytes iframeRect
         []
 
-module SoundPlayer =
-    open System.Media
-
-    let audioPath file =
-        Path.Combine("audio", file) + ".wav"
-
-    let piano =
-        function
-        | A -> audioPath "piano_a"
-        | B -> audioPath "piano_b"
-
-    let synth1 =
-        function
-        | A -> audioPath "synth1_a"
-        | B -> audioPath "synth1_b"
-
-    let soundplayer = new SoundPlayer()
-
-    let playNotes notes =
-        ()
-
 module PianoLogic =
     let getNotes activePolygons previousActivePolygons =
         []
 
-let rec loop previousActivePolygons iframeRect =
-    Thread.Sleep(40)
-    let screenshot = BrowserAutomation.screenshot()    
-    let activePolygons = ImageProcessing.getActivePolygons screenshot iframeRect
-    let notes = PianoLogic.getNotes activePolygons previousActivePolygons
-    SoundPlayer.playNotes notes    
-    //loop activePolygons iframeRect
+module Main =
+    [<Literal>]
+    let framePeriod = 10000
+
+    let rec loop previousActivePolygons iframeRect = async {
+        let screenshot = BrowserAutomation.screenshot()    
+        let activePolygons = ImageProcessing.getActivePolygons screenshot iframeRect
+        let notes = PianoLogic.getNotes activePolygons previousActivePolygons
+        do! Async.Sleep(framePeriod)
+        return! loop activePolygons iframeRect
+    }
+
+module WebServer =
+    open Suave
+    open Suave.Http
+    open Suave.Sockets
+    open Suave.WebSocket
+    open Suave.Web
+    open Suave.Http.Files
+    open Suave.Sockets.Control
+
+    let giveMusic (webSocket : WebSocket) =
+        fun cx -> socket {
+      let loop = ref true
+      while !loop do
+        let! msg = webSocket.read()
+        match msg with
+        | (Text, data, true) ->
+          let str = Utils.UTF8.toString data
+          do! webSocket.send Text data true
+        | (Ping, _, _) ->
+          do! webSocket.send Pong [||] true
+        | (Close, _, _) ->
+          do! webSocket.send Close [||] true
+          loop := false
+        | _ -> ()
+      }
+
+    let app : Types.WebPart =
+      choose [
+        Applicatives.path "/givemethemusic" >>= handShake giveMusic
+        Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "index.htm"; browseHome ];
+        RequestErrors.NOT_FOUND "Found no handlers."
+        ]
+
+    let start () =
+        let config = defaultConfig
+        printfn "Starting on %d" config.bindings.Head.socketBinding.port
+        startWebServer config app
 
 [<EntryPoint>]
 let main argv = 
-    BrowserAutomation.start ()
+    BrowserAutomation.start ()    
     let iframeRect = BrowserAutomation.iframeRect()
-    loop [] iframeRect
+    let Async.StartAsTask (Main.loop [] iframeRect)
+    WebServer.start()
     0

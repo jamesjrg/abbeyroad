@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<title>Abbey Road</title>
+<style type="text/css">
+</style>
+<script>
+/*
+sounds = {
+    'D': new Audio('audio/CHINESE TD_2.wav'),
+    'E': new Audio('audio/CHINESE TD_2.wav'),
+    'F#': new Audio('audio/CHINESE TD_2.wav'),
+    'G': new Audio('audio/CHINESE TD_2.wav'),
+    'A': new Audio('audio/CHINESE TD_2.wav'),
+    'B': new Audio('audio/CHINESE TD_2.wav'),
+    'C#': new Audio('audio/CHINESE TD_2.wav'),
+    'D': new Audio('audio/CHINESE TD_2.wav')
+};
+sounds['D'].play();
+*/
+
+$(function () {
+    var connection = new WebSocket('ws://127.0.0.1:8083/givemethemusic');
+
+    connection.onopen = function () {
+        // connection is opened and ready to use
+    };
+
+    connection.onerror = function (error) {
+        // an error occurred when sending/receiving data
+    };
+
+    connection.onmessage = function (message) {
+        // try to decode json (I assume that each message from server is json)
+        try {
+            var json = JSON.parse(message.data);
+        } catch (e) {
+            console.log('This doesn\'t look like a valid JSON: ', message.data);
+            return;
+        }
+        // handle incoming message
+    };
+});
+
+</script>
+<body>
+    <div>
+    </div>
+</body>
