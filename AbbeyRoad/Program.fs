@@ -15,7 +15,7 @@ type Note =
     | White5
     | Black6
     | White6
-    | Black7        
+    | Black7
 
 module DevTools =
     open System.IO
@@ -134,24 +134,21 @@ module ImageProcessing =
     4. don't compare to example images at all, but rather just test entropy of histogram for each polygon - high entropy means the 
     plain colour of the background is likely mixed up with an object on top of it
     *)
-    let getActivePolygons (screenshot:byte[]) (iframeRect:System.Drawing.Rectangle) =
+    let getActiveKeys (screenshot:byte[]) (iframeRect:System.Drawing.Rectangle) =
         use webcamImage = cropWebcamImage screenshot iframeRect
-        []
-
-module PianoLogic =
-    let getNotes activePolygons previousActivePolygons =
         []
 
 module Main =
     [<Literal>]
     let framePeriod = 10000
 
-    let rec loop previousActivePolygons iframeRect = async {
+    let rec loop previousActiveKeys iframeRect = async {
         let screenshot = BrowserAutomation.screenshot()
-        let activePolygons = ImageProcessing.getActivePolygons screenshot iframeRect
-        let notes = PianoLogic.getNotes activePolygons previousActivePolygons
+        let activeKeys = ImageProcessing.getActiveKeys screenshot iframeRect
+        let onPressNotes = Set(activeKeys) - Set(previousActiveKeys)
+        WebServer.broadcastNotes onPressNotes activeKeys
         do! Async.Sleep(framePeriod)
-        return! loop activePolygons iframeRect
+        return! loop activeKeys iframeRect
     }
 
     let startCapturingImages() =
@@ -168,12 +165,11 @@ module Main =
         //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x64\OpenCvSharpExtern.dll") |> ignore
         //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x86\OpenCvSharpExtern.dll") |> ignore
 
-        //BrowserAutomation.start ()
-        //let iframeRect = BrowserAutomation.iframeRect()
-        //let screenshot = BrowserAutomation.screenshot()
-        //let webcamImage = ImageProcessing.cropWebcamImage screenshot iframeRect
-        //let x = ImageProcessing.createMaskedPolygon webcamImage ImageProcessing.keys.[0]
-        let x = ImageProcessing.createMaskImage ImageProcessing.keys.[0]
+        BrowserAutomation.start ()
+        let iframeRect = BrowserAutomation.iframeRect()
+        let screenshot = BrowserAutomation.screenshot()
+        let webcamImage = ImageProcessing.cropWebcamImage screenshot iframeRect
+        let x = ImageProcessing.createMaskedPolygon webcamImage ImageProcessing.keys.[0]
         DevTools.showMatInWinForm(x)        
 
     [<EntryPoint>]

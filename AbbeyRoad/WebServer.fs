@@ -25,6 +25,9 @@ let giveMusic (webSocket : WebSocket) =
         | _ -> ()
     }
 
+let broadcastNotes onPressNotes heldNotes =
+    ()
+
 let app : Types.WebPart =
     choose [
     Applicatives.path "/givemethemusic" >>= handShake giveMusic
