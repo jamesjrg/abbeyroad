@@ -45,7 +45,7 @@ module ImageProcessing =
     open Microsoft.FSharp.Reflection
     open OpenCvSharp    
 
-    type Key = { Label: Note; Points: Point[] }
+    type Key = { Label: Note; TopLeft: Point; TopRight: Point; BottomRight: Point; BottomLeft: Point }
 
     let coordsTopAndBottom =
         [|
@@ -70,33 +70,37 @@ module ImageProcessing =
         |> Seq.pairwise
         |> Seq.zip (FSharpType.GetUnionCases typeof<Note>)
         |> Seq.map (fun (label, ((topLeft, bottomLeft), (topRight, bottomRight))) ->
-            { Label = FSharpValue.MakeUnion(label, [||]) :?> Note; Points = [| topLeft; topRight; bottomRight; bottomLeft |] })
+            {   Label = FSharpValue.MakeUnion(label, [||]) :?> Note;
+                TopLeft = topLeft;
+                TopRight = topRight;
+                BottomRight = bottomRight;
+                BottomLeft = bottomLeft })
         |> Array.ofSeq
       
     let cropWebcamImage (screenshotBytes:byte[]) (iframeRect:System.Drawing.Rectangle) =
         use uncropped = Mat.FromImageData(screenshotBytes, ImreadModes.GrayScale)
         uncropped.SubMat(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
 
-    let createMaskImage (contours:Point[]) (topRight:Point) (bottomLeft:Point) =        
+    let createMaskImage (key:Key) = 
         let mask =
             Mat.Zeros(
-                bottomLeft.Y - topRight.Y,
-                topRight.X - bottomLeft.X,
+                key.BottomRight.Y - key.TopLeft.Y,
+                key.TopRight.X - key.BottomLeft.X,
                 MatType.CV_8UC1).ToMat()
+        let contours =
+            [key.TopLeft; key.TopRight; key.BottomRight; key.BottomLeft]
+            |> Seq.map (fun p -> Point(p.X - key.BottomLeft.X, p.Y - key.TopLeft.Y))
         mask.DrawContours(
-                [contours:> Collections.Generic.IEnumerable<Point>] :>
-                Collections.Generic.IEnumerable<Collections.Generic.IEnumerable<Point>>,
+                [contours] :> Collections.Generic.IEnumerable<Collections.Generic.IEnumerable<Point>>,
                 -1,
                 Scalar(255., 255., 255.),
                 -1)
         mask
 
     //assumes polygons slopes down from right to left
-    let createMaskedPolygon (wholeImage:Mat) (contours:Point[]) =
-        let topRight = contours.[1]
-        let bottomLeft = contours.[3]
-        let mask = createMaskImage contours topRight bottomLeft
-        use regionOfInterest = wholeImage.SubMat(topRight.Y, bottomLeft.Y, bottomLeft.X, topRight.X)
+    let createMaskedPolygon (wholeImage:Mat) (key:Key) =
+        let mask = createMaskImage key
+        use regionOfInterest = wholeImage.SubMat(key.TopLeft.Y, key.BottomRight.Y, key.BottomLeft.X, key.TopRight.X)
         Cv2.BitwiseAnd(InputArray.Create(mask), InputArray.Create(regionOfInterest), OutputArray.Create(mask))
         mask
 
@@ -157,7 +161,10 @@ module Main =
 
     let testing () =
         //failing attempts to get it to load native dlls when running in F# Interactive
-        //System.Environment.CurrentDirectory <- @"C:\repos\oss\abbeyroad\AbbeyRoad\bin\Debug\dll\x64"        
+        //WindowsLibraryLoadedr.cs in OpenCVSharp source attempts to load the dll explictly in static constructor, looking in
+        //executingAssembly.Location \ dll \ (x86|x64)
+        //Note FSI runs in 32 bit mode by default, but can optionally run in 64 bit mode
+        //System.Environment.CurrentDirectory <- @"C:\repos\oss\abbeyroad\AbbeyRoad\bin\Debug\"        
         //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x64\OpenCvSharpExtern.dll") |> ignore
         //DevTools.LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x86\OpenCvSharpExtern.dll") |> ignore
 
@@ -165,11 +172,8 @@ module Main =
         //let iframeRect = BrowserAutomation.iframeRect()
         //let screenshot = BrowserAutomation.screenshot()
         //let webcamImage = ImageProcessing.cropWebcamImage screenshot iframeRect
-        //let x = ImageProcessing.createMaskedPolygon webcamImage (ImageProcessing.keys.[0]).Points
-        let contours = ImageProcessing.keys.[0].Points
-        let topRight = contours.[1]
-        let bottomLeft = contours.[3]
-        let x = ImageProcessing.createMaskImage contours topRight bottomLeft
+        //let x = ImageProcessing.createMaskedPolygon webcamImage ImageProcessing.keys.[0]
+        let x = ImageProcessing.createMaskImage ImageProcessing.keys.[0]
         DevTools.showMatInWinForm(x)        
 
     [<EntryPoint>]
