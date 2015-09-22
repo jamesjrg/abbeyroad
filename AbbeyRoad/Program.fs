@@ -121,19 +121,19 @@ module WebServer =
 
     let giveMusic (webSocket : WebSocket) =
         fun cx -> socket {
-      let loop = ref true
-      while !loop do
-        let! msg = webSocket.read()
-        match msg with
-        | (Text, data, true) ->
-          let str = Utils.UTF8.toString data
-          do! webSocket.send Text data true
-        | (Ping, _, _) ->
-          do! webSocket.send Pong [||] true
-        | (Close, _, _) ->
-          do! webSocket.send Close [||] true
-          loop := false
-        | _ -> ()
+            let loop = ref true
+            while !loop do
+            let! msg = webSocket.read()
+            match msg with
+            | (Text, data, true) ->
+                let str = Utils.UTF8.toString data
+                do! webSocket.send Text data true
+            | (Ping, _, _) ->
+                do! webSocket.send Pong [||] true
+            | (Close, _, _) ->
+                do! webSocket.send Close [||] true
+                loop := false
+            | _ -> ()
       }
 
     let app : Types.WebPart =
