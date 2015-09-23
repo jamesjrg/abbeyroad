@@ -1,8 +1,17 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <meta charset="utf-8">
 <title>Abbey Road</title>
 <style type="text/css">
+    
+iframe {
+    position:absolute;
+    left: 0px;
+    width: 100%;
+    top: 0px;
+    height: 100%;
+    overflow: hidden;
+}
 </style>
 <script>
 /*
@@ -19,7 +28,7 @@ sounds = {
 sounds['D'].play();
 */
 
-$(function () {
+document.addEventListener("DOMContentLoaded", function() {
     var connection = new WebSocket('ws://127.0.0.1:8083/givemethemusic');
 
     connection.onopen = function () {
@@ -44,6 +53,5 @@ $(function () {
 
 </script>
 <body>
-    <div>
-    </div>
+    <iframe frameborder="0" scrolling="no" src="http://www.abbeyroad.com/crossing"></iframe>
 </body>

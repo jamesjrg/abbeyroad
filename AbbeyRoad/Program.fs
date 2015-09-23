@@ -174,9 +174,7 @@ module Main =
 
     [<EntryPoint>]
     let main argv = 
-        testing() |> ignore
-        (*
-        startCapturingImages ()
+        //testing() |> ignore
+        //startCapturingImages ()
         WebServer.start ()
-        *)
         0

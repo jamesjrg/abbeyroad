@@ -31,11 +31,10 @@ let broadcastNotes onPressNotes heldNotes =
 let app : Types.WebPart =
     choose [
     Applicatives.path "/givemethemusic" >>= handShake giveMusic
-    Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "index.htm"; browseHome ];
+    Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "web/index.htm"; browse "web" ];
     RequestErrors.NOT_FOUND "Found no handlers."
     ]
 
 let start () =
     let config = defaultConfig
-    printfn "Starting on %d" config.bindings.Head.socketBinding.port
     startWebServer config app
