@@ -31,6 +31,6 @@ module Main =
     [<EntryPoint>]
     let main argv = 
         //testing() |> ignore
-        startCapturingImages ()
+        //startCapturingImages ()
         WebServer.start ()
         0

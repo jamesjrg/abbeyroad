@@ -9,6 +9,7 @@ open Suave.Sockets.Control
 open Newtonsoft.Json
 open Microsoft.FSharp.Reflection
 open System.Text
+open System.IO
 
 (* //FIXME this doesn't even try to handle either threading issues or people disconnecting *)
 let mutable clients = []
@@ -40,9 +41,13 @@ let broadcastNotes (onPressNotes:Types.Key seq) (heldNotes:Types.Key seq) =
     Async.Parallel sends
 
 let app : Types.WebPart =
+    let staticFilesPath =
+        Path.Combine(
+            Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
+            "web")
     choose [
     Applicatives.path "/givemethemusic" >>= handShake giveMusic
-    Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "web/index.htm"; browse "web" ];
+    Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "web/index.htm"; browse staticFilesPath ];
     RequestErrors.NOT_FOUND "Found no handlers."
     ]
 
