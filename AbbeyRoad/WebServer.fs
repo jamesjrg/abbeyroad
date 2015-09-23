@@ -2,14 +2,20 @@
 
 open Suave
 open Suave.Http
-open Suave.Sockets
 open Suave.WebSocket
 open Suave.Web
 open Suave.Http.Files
 open Suave.Sockets.Control
+open Newtonsoft.Json
+open Microsoft.FSharp.Reflection
+open System.Text
+
+(* //FIXME this doesn't even try to handle either threading issues or people disconnecting *)
+let mutable clients = []
 
 let giveMusic (webSocket : WebSocket) =
     fun cx -> socket {
+        clients <- webSocket :: clients
         let loop = ref true
         while !loop do
         let! msg = webSocket.read()
@@ -25,8 +31,13 @@ let giveMusic (webSocket : WebSocket) =
         | _ -> ()
     }
 
-let broadcastNotes onPressNotes heldNotes =
-    ()
+let getUnionCaseName (e:'a) = ( FSharpValue.GetUnionFields(e, typeof<'a>) |> fst ).Name
+
+let broadcastNotes (onPressNotes:Types.Key seq) (heldNotes:Types.Key seq) =
+    let data = Map.ofSeq [("onPressNotes", Seq.map getUnionCaseName onPressNotes); ("heldNotes", Seq.map getUnionCaseName heldNotes)]
+    let json = JsonConvert.SerializeObject(data)
+    let sends = clients |> Seq.map (fun client -> client.send Text (Encoding.UTF8.GetBytes json) true)
+    Async.Parallel sends
 
 let app : Types.WebPart =
     choose [

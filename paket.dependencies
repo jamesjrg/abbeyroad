@@ -3,3 +3,4 @@ source http://nuget.org/api/v2
 nuget OpenCvSharp3-AnyCPU
 nuget canopy
 nuget Suave
+nuget Newtonsoft.Json

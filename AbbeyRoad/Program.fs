@@ -1,21 +1,7 @@
 ﻿namespace AbbeyRoad
 
+open AbbeyRoad.Types
 open System
-
-type Note =
-    | Black1
-    | White1
-    | Black2
-    | White2
-    | Black3
-    | White3
-    | Black4
-    | White4
-    | Black5
-    | White5
-    | Black6
-    | White6
-    | Black7
 
 module DevTools =
     open System.IO
@@ -45,7 +31,7 @@ module ImageProcessing =
     open Microsoft.FSharp.Reflection
     open OpenCvSharp    
 
-    type Key = { Label: Note; TopLeft: Point; TopRight: Point; BottomRight: Point; BottomLeft: Point }
+    type KeyPolygon = { Label: Key; TopLeft: Point; TopRight: Point; BottomRight: Point; BottomLeft: Point }
 
     let coordsTopAndBottom =
         [|
@@ -68,9 +54,9 @@ module ImageProcessing =
     let keys =
         coordsTopAndBottom
         |> Seq.pairwise
-        |> Seq.zip (FSharpType.GetUnionCases typeof<Note>)
+        |> Seq.zip (FSharpType.GetUnionCases typeof<Key>)
         |> Seq.map (fun (label, ((topLeft, bottomLeft), (topRight, bottomRight))) ->
-            {   Label = FSharpValue.MakeUnion(label, [||]) :?> Note;
+            {   Label = FSharpValue.MakeUnion(label, [||]) :?> Key;
                 TopLeft = topLeft;
                 TopRight = topRight;
                 BottomRight = bottomRight;
@@ -81,7 +67,7 @@ module ImageProcessing =
         use uncropped = Mat.FromImageData(screenshotBytes, ImreadModes.GrayScale)
         uncropped.SubMat(Rect(iframeRect.Left, iframeRect.Top, iframeRect.Width, iframeRect.Height))
 
-    let createMaskImage (key:Key) = 
+    let createMaskImage (key:KeyPolygon) = 
         let mask =
             Mat.Zeros(
                 key.BottomRight.Y - key.TopLeft.Y,
@@ -98,7 +84,7 @@ module ImageProcessing =
         mask
 
     //assumes polygons slopes down from right to left
-    let createMaskedPolygon (wholeImage:Mat) (key:Key) =
+    let createMaskedPolygon (wholeImage:Mat) (key:KeyPolygon) =
         let mask = createMaskImage key
         use regionOfInterest = wholeImage.SubMat(key.TopLeft.Y, key.BottomRight.Y, key.BottomLeft.X, key.TopRight.X)
         Cv2.BitwiseAnd(InputArray.Create(mask), InputArray.Create(regionOfInterest), OutputArray.Create(mask))
@@ -136,17 +122,20 @@ module ImageProcessing =
     *)
     let getActiveKeys (screenshot:byte[]) (iframeRect:System.Drawing.Rectangle) =
         use webcamImage = cropWebcamImage screenshot iframeRect
-        []
+        let rnd = System.Random()
+        List.init (rnd.Next(8)) (fun _ ->
+            let unionCaseInfo = FSharpType.GetUnionCases typeof<Key>
+            FSharpValue.MakeUnion(unionCaseInfo.[(rnd.Next(6))], [||]) :?> Key)
 
 module Main =
     [<Literal>]
-    let framePeriod = 10000
+    let framePeriod = 100
 
     let rec loop previousActiveKeys iframeRect = async {
         let screenshot = BrowserAutomation.screenshot()
         let activeKeys = ImageProcessing.getActiveKeys screenshot iframeRect
         let onPressNotes = Set(activeKeys) - Set(previousActiveKeys)
-        WebServer.broadcastNotes onPressNotes activeKeys
+        let! writeResults = WebServer.broadcastNotes onPressNotes activeKeys
         do! Async.Sleep(framePeriod)
         return! loop activeKeys iframeRect
     }
@@ -175,6 +164,6 @@ module Main =
     [<EntryPoint>]
     let main argv = 
         //testing() |> ignore
-        //startCapturingImages ()
+        startCapturingImages ()
         WebServer.start ()
         0

@@ -48,6 +48,7 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Types.fs" />
     <Compile Include="BrowserAutomation.fs" />
     <Compile Include="WebServer.fs" />
     <Compile Include="Program.fs" />
