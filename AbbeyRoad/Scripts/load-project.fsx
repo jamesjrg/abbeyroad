@@ -4,4 +4,5 @@
 #load @"..\Types.fs"
       @"..\BrowserAutomation.fs"
       @"..\WebServer.fs"
+      @"..\ImageProcessing.fs"
       @"..\Program.fs"
