@@ -5,7 +5,11 @@ open Microsoft.FSharp.Reflection
 open OpenCvSharp 
 open System
 
-//FIXME lots of OpenCV types are IDisposable, possibly eats memory at the moment
+(* Image processing code using OpenCV
+
+FIXMEs:
+- lots of OpenCV types are IDisposable, possibly eats memory at the moment
+*)
 
 module DevTools =
     open System.IO
@@ -100,12 +104,6 @@ let createMaskedPolygon (wholeImage:Mat) (key:KeyPolygon) =
     Cv2.BitwiseAnd(InputArray.Create(mask), InputArray.Create(regionOfInterest), OutputArray.Create(mask))
     mask
 
-let euclidianDistance () =
-    ()
-
-let histogramEntropy () =
-    ()
-
 let compareHistograms (empty:Mat) (actual:Mat) comparisonMethod =
     Cv2.CompareHist(InputArray.Create(empty), InputArray.Create(actual), comparisonMethod)
 
@@ -123,12 +121,15 @@ let getHistogram (src:Mat) =
         ranges)
 
 (*
-different comparison ideas:
-1. simple euclidian distance
-2. simple histogram comparison (4 different comparisons included in OpenCV) - though very sensitive to lighting changes
+different ideas for for comparing image of empty crossing section to current crossing section image:
+1. euclidian distance (OpenCV norm function)
+2. histogram comparison, 4 different comparisons included in OpenCV - though very sensitive to lighting changes
 3. histogram comparison, combined with adjusting brightness of example empty images to match current time of day & weather
-4. don't compare to example images at all, but rather just test entropy of histogram for each polygon - high entropy means the 
+4. don't compare to empty image at all, but rather just test entropy of histogram for each polygon - high entropy means the 
 plain colour of the background is likely mixed up with an object on top of it
+5. Use OpenCV built in comparison functions
+
+All the above could be done in grayscale or in RGB
 *)
 let getActiveKeys (screenshot:byte[]) (iframeRect:System.Drawing.Rectangle) =
     use webcamImage = cropWebcamImage screenshot iframeRect
