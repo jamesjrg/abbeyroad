@@ -9,8 +9,8 @@ module Main =
     let rec loop previousActiveKeys iframeRect = async {
         let screenshot = BrowserAutomation.screenshot()
         let activeKeys = ImageProcessing.getActiveKeys screenshot iframeRect
-        let onPressNotes = Set(activeKeys) - Set(previousActiveKeys)
-        let! writeResults = WebServer.broadcastNotes onPressNotes activeKeys
+        let onPressKeys = Set(activeKeys) - Set(previousActiveKeys)
+        let! writeResults = WebServer.broadcastKeys onPressKeys activeKeys
         do! Async.Sleep(framePeriod)
         return! loop activeKeys iframeRect
     }

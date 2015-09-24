@@ -8,36 +8,54 @@ open Suave.Http.Files
 open Suave.Sockets.Control
 open Newtonsoft.Json
 open Microsoft.FSharp.Reflection
+open System
 open System.Text
 open System.IO
 
-(* //FIXME this doesn't even try to handle either threading issues or people disconnecting *)
+(*
+The web server for sending pressed keys over web sockets as well as serving the static web content
+
+//FIXME:
+- might need to do more than just assess failed reads to handle web sockets disconnecting
+- could use a data structure with quicker removal to store clients
+*)
+
+let monitor = new Object()
 let mutable clients = []
+
+let removeClient webSocket = 
+    lock monitor (fun () -> clients <- List.filter (fun x -> not <| x.Equals(webSocket)) clients)
 
 let giveMusic (webSocket : WebSocket) =
     fun cx -> socket {
-        clients <- webSocket :: clients
+        lock monitor (fun () -> clients <- webSocket :: clients)
         let loop = ref true
         while !loop do
         let! msg = webSocket.read()
         match msg with
         | (Text, data, true) ->
-            let str = Utils.UTF8.toString data
-            do! webSocket.send Text data true
+            ()
         | (Ping, _, _) ->
             do! webSocket.send Pong [||] true
         | (Close, _, _) ->
             do! webSocket.send Close [||] true
+            removeClient webSocket
             loop := false
         | _ -> ()
     }
 
 let getUnionCaseName (e:'a) = ( FSharpValue.GetUnionFields(e, typeof<'a>) |> fst ).Name
 
-let broadcastNotes (onPressNotes:Types.Key seq) (heldNotes:Types.Key seq) =
-    let data = Map.ofSeq [("onPressNotes", Seq.map getUnionCaseName onPressNotes); ("heldNotes", Seq.map getUnionCaseName heldNotes)]
+let broadcastKeys (newKeys:Types.Key seq) (heldKeys:Types.Key seq) =
+    let data = Map.ofSeq [("newKeys", Seq.map getUnionCaseName newKeys); ("heldKeys", Seq.map getUnionCaseName heldKeys)]
     let json = JsonConvert.SerializeObject(data)
-    let sends = clients |> Seq.map (fun client -> client.send Text (Encoding.UTF8.GetBytes json) true)
+    let sends = clients |> Seq.map (fun client -> async {
+        let! writeResult = client.send Text (Encoding.UTF8.GetBytes json) true
+        match writeResult with
+        | Choice2Of2 error ->
+            printf "client lost with error: %A" error
+            removeClient(client)
+        | _ -> () })
     Async.Parallel sends
 
 let app : Types.WebPart =
