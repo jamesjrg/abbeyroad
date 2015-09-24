@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <html>
-<meta charset="utf-8">
+<meta charset='utf-8'>
 <title>Abbey Road</title>
-<style type="text/css">
+<style type='text/css'>
     
 iframe {
     position:absolute;
@@ -13,43 +13,8 @@ iframe {
     overflow: hidden;
 }
 </style>
-<script src="/javascript/wad.min.js"></script>
-<script>
-/*
-sounds = {
-    'D': new Audio('audio/CHINESE TD_2.wav'),
-    'E': new Audio('audio/CHINESE TD_2.wav'),
-    'F#': new Audio('audio/CHINESE TD_2.wav'),
-    'G': new Audio('audio/CHINESE TD_2.wav'),
-    'A': new Audio('audio/CHINESE TD_2.wav'),
-    'B': new Audio('audio/CHINESE TD_2.wav'),
-    'C#': new Audio('audio/CHINESE TD_2.wav'),
-    'D': new Audio('audio/CHINESE TD_2.wav')
-};
-sounds['D'].play();
-*/
-
-document.addEventListener("DOMContentLoaded", function() {
-    var connection = new WebSocket('ws://127.0.0.1:8083/givemethemusic');
-
-    connection.onopen = function () {
-    };
-
-    connection.onerror = function (error) {
-    };
-
-    connection.onmessage = function (message) {
-        try {
-            var json = JSON.parse(message.data);
-            console.log(json);
-        } catch (e) {
-            console.log('This doesn\'t look like a valid JSON: ', message.data);
-            return;
-        }
-    };
-});
-
-</script>
+<script src='/javascript/wad.min.js'></script>
+<script src='/javascript/thescript.js'></script>
 <body>
-    <iframe frameborder="0" scrolling="no" src="http://www.abbeyroad.com/crossing"></iframe>
+    <iframe frameborder='0' scrolling='no' src='http://www.abbeyroad.com/crossing'></iframe>
 </body>

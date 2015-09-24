@@ -7,6 +7,16 @@ open System
 
 (* Image processing code using OpenCV
 
+different ideas for for comparing image of empty crossing section to current crossing section image:
+1. euclidian distance (OpenCV norm function)
+2. histogram comparison, 4 different comparisons included in OpenCV - though very sensitive to lighting changes
+3. histogram comparison, combined with adjusting brightness of example empty images to match current time of day & weather
+4. don't compare to empty image at all, but rather just test entropy of histogram for each polygon - high entropy means the 
+plain colour of the background is likely mixed up with an object on top of it
+5. Use OpenCV built in comparison functions
+
+All the above could be done in grayscale or in RGB
+
 FIXMEs:
 - lots of OpenCV types are IDisposable, possibly eats memory at the moment
 *)
@@ -44,6 +54,12 @@ module DevTools =
 
         System.Environment.CurrentDirectory <- @"C:\repos\oss\abbeyroad\AbbeyRoad\bin\Debug\dll\x64"        
         LoadLibrary(@"C:\repos\oss\abbeyroad\packages\OpenCvSharp3-AnyCPU\NativeDlls\x64\OpenCvSharpExtern.dll") |> ignore
+
+    let getRandomKeys () =
+        let rnd = System.Random()
+        List.init (rnd.Next(8)) (fun _ ->
+            let unionCaseInfo = FSharpType.GetUnionCases typeof<Key>
+            FSharpValue.MakeUnion(unionCaseInfo.[(rnd.Next(unionCaseInfo.Length))], [||]) :?> Key)
 
 type KeyPolygon = { Label: Key; TopLeft: Point; TopRight: Point; BottomRight: Point; BottomLeft: Point }
 
@@ -120,20 +136,7 @@ let getHistogram (src:Mat) =
         hdims,
         ranges)
 
-(*
-different ideas for for comparing image of empty crossing section to current crossing section image:
-1. euclidian distance (OpenCV norm function)
-2. histogram comparison, 4 different comparisons included in OpenCV - though very sensitive to lighting changes
-3. histogram comparison, combined with adjusting brightness of example empty images to match current time of day & weather
-4. don't compare to empty image at all, but rather just test entropy of histogram for each polygon - high entropy means the 
-plain colour of the background is likely mixed up with an object on top of it
-5. Use OpenCV built in comparison functions
-
-All the above could be done in grayscale or in RGB
-*)
 let getActiveKeys (screenshot:byte[]) (iframeRect:System.Drawing.Rectangle) =
     use webcamImage = cropWebcamImage screenshot iframeRect
-    let rnd = System.Random()
-    List.init (rnd.Next(8)) (fun _ ->
-        let unionCaseInfo = FSharpType.GetUnionCases typeof<Key>
-        FSharpValue.MakeUnion(unionCaseInfo.[(rnd.Next(6))], [||]) :?> Key)
+    DevTools.getRandomKeys()
+

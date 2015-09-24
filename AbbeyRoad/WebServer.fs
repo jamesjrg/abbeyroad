@@ -59,14 +59,15 @@ let broadcastKeys (newKeys:Types.Key seq) (heldKeys:Types.Key seq) =
     Async.Parallel sends
 
 let app : Types.WebPart =
+    //unfortunately Suave's "browse" function to serve static files doesn't support a relative base path
     let staticFilesPath =
         Path.Combine(
             Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
             "web")
     choose [
-    Applicatives.path "/givemethemusic" >>= handShake giveMusic
-    Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "web/index.htm"; browse staticFilesPath ];
-    RequestErrors.NOT_FOUND "Found no handlers."
+        Applicatives.path "/givemethemusic" >>= handShake giveMusic
+        Applicatives.GET >>= choose [ Applicatives.path "/" >>= file "web/index.htm"; browse staticFilesPath ];
+        RequestErrors.NOT_FOUND "Found no handlers."
     ]
 
 let start () =
