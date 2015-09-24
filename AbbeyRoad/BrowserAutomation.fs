@@ -4,8 +4,14 @@ open canopy
 open OpenQA.Selenium
 open System.Drawing
 
-let flashElement () =
-    element ".earthcam-embed-container"
+(*
+Browser automation code using Canopy/Selenium
+
+Provides functions to take a screenshot of a browser window and work out the location and dimensions of the embedded
+iframe within the page  *
+
+Canopy is built on top of Selenium, and this uses almost no Canopy-specific functionality at all
+*)
 
 let iframeRect () =
     let iframe = element "iframe"

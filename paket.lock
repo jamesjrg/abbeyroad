@@ -8,6 +8,7 @@ NUGET
       SizSelCsZzz (0.3.36.0)
     FSharp.Core (4.0.0.1)
     FsPickler (1.4.0)
+    Fuchu (0.6.0)
     Newtonsoft.Json (7.0.1)
     OpenCvSharp3-AnyCPU (3.0.0.20150823)
     Selenium.Support (2.47.0)
@@ -20,3 +21,4 @@ NUGET
     Suave (0.31.2)
       FSharp.Core (>= 3.1.2.5)
       FsPickler (>= 1.2.5)
+    Unquote (3.0.0)

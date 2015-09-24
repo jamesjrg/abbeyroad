@@ -23,8 +23,14 @@ The web server for sending pressed keys over web sockets as well as serving the 
 let monitor = new Object()
 let mutable clients = []
 
+let rec removeItem item lst =
+    match lst with
+    | h::t when h.Equals(item) -> t
+    | h::t -> h::removeItem item t
+    | _ -> []
+
 let removeClient webSocket = 
-    lock monitor (fun () -> clients <- List.filter (fun x -> not <| x.Equals(webSocket)) clients)
+    lock monitor (fun () -> clients <- removeItem webSocket clients)
 
 let giveMusic (webSocket : WebSocket) =
     fun cx -> socket {

@@ -4,3 +4,5 @@ nuget OpenCvSharp3-AnyCPU
 nuget canopy
 nuget Suave
 nuget Newtonsoft.Json
+nuget Fuchu
+nuget Unquote
