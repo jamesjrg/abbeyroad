@@ -6,16 +6,12 @@ open OpenCvSharp
 open System
 
 (*
-  Image processing code using OpenCV
+    Image processing code using OpenCV
 *)
 
 let GRAYSCALE_MODE = true
 let IMAGE_READ_MODE = if GRAYSCALE_MODE then ImreadModes.GrayScale else ImreadModes.Color
 let MAT_TYPE = if GRAYSCALE_MODE then MatType.CV_8UC1 else MatType.CV_8UC3
-
-//histograms
-let HISTOGRAM_RANGE = 256.f
-let N_BINS = 16
 
 //thresholding images
 let THRESHOLD = 130.
@@ -92,73 +88,26 @@ let createMaskedPolygon (wholeImage:Mat) (key:KeyPolygon) =
     Cv2.BitwiseAnd(InputArray.Create(mask), InputArray.Create(regionOfInterest), OutputArray.Create(mask))
     mask
 
-let compareHistograms (empty:Mat) (actual:Mat) comparisonMethod =
-    Cv2.CompareHist(InputArray.Create(empty), InputArray.Create(actual), comparisonMethod)
-
-let getHistogram (src:Mat) (nBins:int) =
-    let hist = OutputArray.Create(new Mat())
-    let channels = if GRAYSCALE_MODE then [| 0 |] else [| 0 ; 1 ; 2 |]
-    let nDims = if GRAYSCALE_MODE then 1 else 3
-    let hdims = if GRAYSCALE_MODE then [| nBins |] else [| nBins; nBins; nBins |]
-    let range = new Rangef(0.f,HISTOGRAM_RANGE)
-    let ranges = if GRAYSCALE_MODE then [| range |] else [| range; range; range |]
-
-    Cv2.CalcHist(
-        [|src|],
-        channels,
-        null, //mask
-        hist,
-        nDims,
-        hdims,
-        ranges)
-    hist.GetMat()
-
-//Shannon entropy: - sum (vals.map val -> P(val) * log P(val))
-//FIXME make this less imperative and/or faster
-//also maybe use base 2
-module Entropy = 
-    //assumes polygons slopes down from right to left
-    let getNumberOfPixels (key : KeyPolygon) = 
-        (key.BottomRight.Y - key.TopLeft.Y) * (key.TopRight.X - key.BottomLeft.X)
+let findChangedKeyImages
+    (previousKeyImages : Mat [])
+    (newKeyImages : Mat []) =
     
-    //entropy of 0 is 0, don't try to calculate log(0)
-    let precalculatedEntropyValues =
-        keys
-        |> Seq.map (fun key ->
-            key.Label,   
-            seq {
-                yield 0.
-                let numPixels = getNumberOfPixels key
-                for x in 1..numPixels do
-                    let probability = (float x) / (float numPixels)
-                    yield (probability * log(probability)) }
-            |> Array.ofSeq)            
-        |> Map.ofSeq
+        Seq.zip3 previousKeyImages newKeyImages keys
+        |> Seq.choose (fun (prev, curr, key) -> 
+            let output = Mat()
+            Cv2.Absdiff(InputArray.Create(prev), InputArray.Create(curr), OutputArray.Create(output))
 
-    let entropyForFrequency (key:Key) (value:int) =
-        precalculatedEntropyValues.[key].[value]
+            let sum =
+                seq {
+                    for row in 0..output.Rows do
+                    for column in 0..output.Cols do
+                    yield output.Get<byte>(row, column) |> int }
+                |> Seq.sum
 
-    let calcGrayscaleHistogramEntropy (hist:Mat) (nBins:int) (key:KeyPolygon) =
-        let mutable entropy = 0.
-         
-        for intensity in 0..nBins - 1 do
-            let value = int <| hist.Get<float32>(intensity)
-            entropy <- entropy - (entropyForFrequency key.Label value)
-
-        entropy
-
-    let calcRgbHistogramEntropy (hist:Mat) (nBins:int) (key:KeyPolygon) =
-        let mutable entropy = 0.
-        
-        for r in 0..nBins - 1 do
-            for g in 0..nBins - 1 do
-                for b in 0..nBins - 1 do
-                    //OpenCV images are BGR so I imagine the histogram is too, though it doesn't actually matter
-                    //if these variables have the wrong name anyway
-                    let value = int <| hist.Get<float32>(b, g, r)
-                    entropy <- entropy - (entropyForFrequency key.Label value)
-
-        entropy
+            if sum > 4000 then
+                Some (key.Label, sum)
+            else
+                None)
 
 module DevTools =
     open System.IO
@@ -187,18 +136,6 @@ module DevTools =
             (name, mat))
         |> Map.ofSeq
 
-    let histogramsAndEntropiesForImage image =
-        keys
-        |> Seq.map (fun key ->
-            let mask = createMaskedPolygon image key
-            let histogram = getHistogram mask N_BINS
-            key.Label, (histogram, Entropy.calcRgbHistogramEntropy histogram N_BINS key))
-        |> Map.ofSeq
-
-    let histogramsAndEntropiesForSingleImage () =
-        histogramsAndEntropiesForImage (loadTestImages().["people-by-day-1"])
-        |> Array.ofSeq
-
     let roisForImage imageName =
         let image = loadTestImages().[imageName]
         keys
@@ -211,10 +148,6 @@ module DevTools =
         keys
         |> Seq.map (fun key -> key.Label, thresholdImageForKey image key)
         |> Map.ofSeq
-
-    let histogramsAndEntropiesForAllImages () =
-        loadTestImages()
-        |> Map.map (fun _ value -> histogramsAndEntropiesForImage value)
 
     let maskImagesForImage imageName =
         let image = loadTestImages().[imageName]
@@ -251,11 +184,23 @@ module DevTools =
             let unionCaseInfo = FSharpType.GetUnionCases typeof<Key>
             FSharpValue.MakeUnion(unionCaseInfo.[(rnd.Next(unionCaseInfo.Length))], [||]) :?> Key)
 
-let getActiveKeys (screenshot:byte[]) (iframeRect:System.Drawing.Rectangle) =
+let getActiveKeys
+    (screenshot : byte[])
+    (iframeRect : System.Drawing.Rectangle)
+    (previousKeyImages : Mat[]) =
+
     use webcamImage = cropWebcamImage screenshot iframeRect
+    let keyImages = keys |> Array.map (fun key -> createMaskedPolygon webcamImage key)
+
     let activeKeys =
-        keys
-        |> Seq.filter (fun key ->
-            0.0 > 1.0)
-    DevTools.getRandomKeys()
+        if previousKeyImages.Length > 0 then
+            findChangedKeyImages keyImages previousKeyImages |> List.ofSeq
+        else
+            []
+    //activeKeys |> Seq.iter (fun (key, sum) -> printfn "key: %A, sum: %d" key sum)
+    //printfn ""
+
+    //avoid spamming with cars and crowds of people
+    let activeKeys = if activeKeys.Length < 4 then activeKeys |> List.map fst else []
+    activeKeys, keyImages
 
