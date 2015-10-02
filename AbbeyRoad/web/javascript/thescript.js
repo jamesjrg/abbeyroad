@@ -15,6 +15,7 @@ var keyToNote = {
 };
 
 var piano = new Wad(Wad.presets.piano)
+piano.setVolume(0.5);
 
 function pressKey(key) {
     piano.play({ pitch : keyToNote[key] }); 
@@ -31,10 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     connection.onmessage = function (message) {
         var json = JSON.parse(message.data);
-        console.log(json);
         var newKeys = json.newKeys;
         newKeys.forEach(function(key) {
             pressKey(key);
+            console.log(key);
         });
     };
 });
