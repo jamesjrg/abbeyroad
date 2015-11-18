@@ -12,8 +12,6 @@ open System
 let GRAYSCALE_MODE = true
 let IMAGE_READ_MODE = if GRAYSCALE_MODE then ImreadModes.GrayScale else ImreadModes.Color
 let MAT_TYPE = if GRAYSCALE_MODE then MatType.CV_8UC1 else MatType.CV_8UC3
-
-//thresholding images
 let THRESHOLD = 130.
 
 type KeyPolygon = {
@@ -23,8 +21,10 @@ type KeyPolygon = {
     BottomRight: Point
     BottomLeft: Point }
 
-//inclusive coordinates,
-//N.B. OpenCV exludes second range value for matrix operations which isn't currently accounted for
+(*
+These are inclusive coordinates
+FWIW OpenCV exludes second range value for matrix operations which FWIW isn't currently accounted for, but these are only approximate anyway
+*)
 let coordsTopAndBottom =
     [|
         (Point(310, 200), Point(275, 214))
@@ -197,10 +197,7 @@ let getActiveKeys
             findChangedKeyImages keyImages previousKeyImages |> List.ofSeq
         else
             []
-    //activeKeys |> Seq.iter (fun (key, sum) -> printfn "key: %A, sum: %d" key sum)
-    //printfn ""
 
-    //avoid spamming with cars and crowds of people
+    //vague attempt to avoid spamming with cars and crowds of people
     let activeKeys = if activeKeys.Length < 4 then activeKeys |> List.map fst else []
     activeKeys, keyImages
-
